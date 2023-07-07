@@ -1,5 +1,5 @@
 [package]
-name = "bevy-test"
+name = "bevy-shoot-em-up"
 version = "0.1.0"
 edition = "2021"
 

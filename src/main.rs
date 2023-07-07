@@ -1,4 +1,4 @@
-use bevy_test::run_app;
+use bevy_shoot_em_up::run_app;
 
 fn main() {
     run_app();
