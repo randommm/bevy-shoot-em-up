@@ -62,10 +62,10 @@ struct Sounds {
     game_over: Handle<AudioSource>,
 }
 
-#[derive(Default)]
+#[derive(Default, Event)]
 struct CollisionBulletEnemyEvent;
 
-#[derive(Default)]
+#[derive(Default, Event)]
 struct GameOverEvent;
 
 #[derive(Resource, Default)]
@@ -89,46 +89,58 @@ pub fn run_app() {
         .add_state::<AppState>()
         .add_event::<CollisionBulletEnemyEvent>()
         .add_event::<GameOverEvent>()
-        .add_startup_system(setup)
-        .add_startup_system(setup_walls)
-        .add_startup_system(setup_score_board)
-        .add_startup_system(spawn_things)
-        .add_system(spawn_player.run_if(in_state(AppState::GameStart)))
-        .add_system(
+        .add_systems(Startup, setup)
+        .add_systems(Startup, setup_walls)
+        .add_systems(Startup, setup_score_board)
+        .add_systems(Startup, spawn_things)
+        .add_systems(Update, spawn_player.run_if(in_state(AppState::GameStart)))
+        .add_systems(
+            Update,
             check_player_collide_enemy
                 .before(shoot_bullet)
                 .run_if(in_state(AppState::InGame)),
         )
-        .add_system(
+        .add_systems(
+            Update,
             shoot_bullet
                 .before(move_bullet)
                 .run_if(in_state(AppState::InGame)),
         )
-        .add_system(
+        .add_systems(
+            Update,
             move_bullet
                 .before(move_player)
                 .run_if(in_state(AppState::InGame)),
         )
-        .add_system(
+        .add_systems(
+            Update,
             move_player
                 .before(check_bullet_collide_enemy)
                 .run_if(in_state(AppState::InGame)),
         )
-        .add_system(
+        .add_systems(
+            Update,
             check_bullet_collide_enemy
                 .before(spawn_and_move_enemies)
                 .run_if(in_state(AppState::InGame)),
         )
-        .add_system(
+        .add_systems(
+            Update,
             play_bullet_collide_enemy_sound
                 .after(check_bullet_collide_enemy)
                 .run_if(in_state(AppState::InGame)),
         )
-        .add_system(play_game_over_sound.after(check_player_collide_enemy))
-        .add_system(spawn_and_move_enemies.run_if(in_state(AppState::InGame)))
-        .add_system(update_scoreboard.run_if(in_state(AppState::InGame)))
-        .add_system(game_restarter.run_if(in_state(AppState::GameOver)))
-        .add_system(bevy::window::close_on_esc)
+        .add_systems(
+            Update,
+            play_game_over_sound.after(check_player_collide_enemy),
+        )
+        .add_systems(
+            Update,
+            spawn_and_move_enemies.run_if(in_state(AppState::InGame)),
+        )
+        .add_systems(Update, update_scoreboard.run_if(in_state(AppState::InGame)))
+        .add_systems(Update, game_restarter.run_if(in_state(AppState::GameOver)))
+        .add_systems(Update, bevy::window::close_on_esc)
         .init_resource::<DestroyedEnemyCount>()
         .run();
 }
@@ -261,23 +273,29 @@ fn check_bullet_collide_enemy(
 
 fn play_bullet_collide_enemy_sound(
     mut collision_bullet_enemy_events: EventReader<CollisionBulletEnemyEvent>,
-    audio: Res<Audio>,
     sound: Res<Sounds>,
+    mut commands: Commands,
 ) {
     if !collision_bullet_enemy_events.is_empty() {
         collision_bullet_enemy_events.clear();
-        audio.play(sound.collision_bullet_enemy.clone());
+        commands.spawn(AudioBundle {
+            source: sound.collision_bullet_enemy.clone(),
+            settings: PlaybackSettings::DESPAWN,
+        });
     }
 }
 
 fn play_game_over_sound(
     mut collision_bullet_enemy_events: EventReader<GameOverEvent>,
-    audio: Res<Audio>,
     sound: Res<Sounds>,
+    mut commands: Commands,
 ) {
     if !collision_bullet_enemy_events.is_empty() {
         collision_bullet_enemy_events.clear();
-        audio.play(sound.game_over.clone());
+        commands.spawn(AudioBundle {
+            source: sound.game_over.clone(),
+            settings: PlaybackSettings::DESPAWN,
+        });
     }
 }
 
@@ -311,7 +329,7 @@ fn spawn_and_move_enemies(
 ) {
     let player_position = query_player.single().translation;
     time_since.0 += time.delta_seconds();
-    let allow_new_spawn = if time_since.0 > 0.5 {
+    let allow_new_spawn = if time_since.0 > 0.4 {
         time_since.0 = 0.0;
         true
     } else {
@@ -336,17 +354,17 @@ fn spawn_and_move_enemies(
         {
             direction.y = -direction.y;
         }
-        transform.translation.x += 30.0
+        transform.translation.x += 80.0
             * time.delta_seconds()
             * direction.x
             * (1. + destroyed_enemy_count.0 as f32 * 0.08);
-        transform.translation.y += 30.0
+        transform.translation.y += 80.0
             * time.delta_seconds()
             * direction.y
             * (1. + destroyed_enemy_count.0 as f32 * 0.08);
     }
 
-    if query_enemy.iter().len() >= 7 || !allow_new_spawn {
+    if query_enemy.iter().len() >= 8 || !allow_new_spawn {
         return;
     }
 
