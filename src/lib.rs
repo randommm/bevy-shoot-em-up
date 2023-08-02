@@ -309,7 +309,7 @@ fn gen_rand(rng: &mut Rng, min: f32, max: f32) -> f32 {
 //     normalize_direction(direction);
 // }
 
-fn normalize_direction(mut direction: &mut Direction) {
+fn normalize_direction(direction: &mut Direction) {
     let norm = (direction.x.powi(2) + direction.y.powi(2)).sqrt() + 1e-10;
     direction.x /= norm;
     direction.y /= norm;
