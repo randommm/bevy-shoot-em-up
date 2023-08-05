@@ -6,8 +6,11 @@
 
 use bevy::prelude::*;
 
+#[cfg(feature = "mobile")]
+use crate::PRE_BOTTOM_WALL;
 use crate::{
-    DestroyedEnemyCount, BOTTOM_WALL, LEFT_WALL, RIGHT_WALL, TOP_WALL, WALL_COLOR, WALL_THICKNESS,
+    DestroyedEnemyCount, LEFT_WALL, RIGHT_WALL, TOP_WALL, TRUE_BOTTOM_WALL, WALL_COLOR,
+    WALL_THICKNESS,
 };
 
 const SCOREBOARD_FONT_SIZE: f32 = 40.0;
@@ -30,22 +33,28 @@ struct WallBundle {
 enum WallLocation {
     Left,
     Right,
-    Bottom,
+    #[cfg(feature = "mobile")]
+    PreBottom,
+    TrueBottom,
     Top,
 }
 
 impl WallLocation {
     fn position(&self) -> Vec2 {
+        let lr_y_pos = (TOP_WALL + TRUE_BOTTOM_WALL) / 2.;
+        let ub_x_pos = (RIGHT_WALL + LEFT_WALL) / 2.;
         match self {
-            WallLocation::Left => Vec2::new(LEFT_WALL, 0.),
-            WallLocation::Right => Vec2::new(RIGHT_WALL, 0.),
-            WallLocation::Bottom => Vec2::new(0., BOTTOM_WALL),
-            WallLocation::Top => Vec2::new(0., TOP_WALL),
+            WallLocation::Left => Vec2::new(LEFT_WALL, lr_y_pos),
+            WallLocation::Right => Vec2::new(RIGHT_WALL, lr_y_pos),
+            #[cfg(feature = "mobile")]
+            WallLocation::PreBottom => Vec2::new(ub_x_pos, PRE_BOTTOM_WALL),
+            WallLocation::TrueBottom => Vec2::new(ub_x_pos, TRUE_BOTTOM_WALL),
+            WallLocation::Top => Vec2::new(ub_x_pos, TOP_WALL),
         }
     }
 
     fn size(&self) -> Vec2 {
-        let arena_height = TOP_WALL - BOTTOM_WALL;
+        let arena_height = TOP_WALL - TRUE_BOTTOM_WALL;
         let arena_width = RIGHT_WALL - LEFT_WALL;
         // Make sure we haven't messed up our constants
         assert!(arena_height > 0.0);
@@ -55,9 +64,11 @@ impl WallLocation {
             WallLocation::Left | WallLocation::Right => {
                 Vec2::new(WALL_THICKNESS, arena_height + WALL_THICKNESS)
             }
-            WallLocation::Bottom | WallLocation::Top => {
+            WallLocation::Top | WallLocation::TrueBottom => {
                 Vec2::new(arena_width + WALL_THICKNESS, WALL_THICKNESS)
             }
+            #[cfg(feature = "mobile")]
+            WallLocation::PreBottom => Vec2::new(arena_width + WALL_THICKNESS, WALL_THICKNESS),
         }
     }
 }
@@ -94,64 +105,11 @@ pub fn setup_walls(mut commands: Commands) {
     // Walls
     commands.spawn(WallBundle::new(WallLocation::Left));
     commands.spawn(WallBundle::new(WallLocation::Right));
-    commands.spawn(WallBundle::new(WallLocation::Bottom));
+    #[cfg(feature = "mobile")]
+    commands.spawn(WallBundle::new(WallLocation::PreBottom));
+    commands.spawn(WallBundle::new(WallLocation::TrueBottom));
     commands.spawn(WallBundle::new(WallLocation::Top));
 }
-
-// fn check_for_collisions(
-//     mut commands: Commands,
-//     //mut scoreboard: ResMut<Scoreboard>,
-//     //mut ball_query: Query<(&mut Velocity, &Transform), With<Ball>>,
-//     //collider_query: Query<(Entity, &Transform, Option<&Brick>), With<Collider>>,
-//     mut collision_events: EventWriter<CollisionEvent>,
-// ) {
-//     let (mut ball_velocity, ball_transform) = ball_query.single_mut();
-//     let ball_size = ball_transform.scale.truncate();
-
-//     // check collision with walls
-//     for (collider_entity, transform, maybe_brick) in &collider_query {
-//         let collision = collide(
-//             ball_transform.translation,
-//             ball_size,
-//             transform.translation,
-//             transform.scale.truncate(),
-//         );
-//         if let Some(collision) = collision {
-//             // Sends a collision event so that other systems can react to the collision
-//             collision_events.send_default();
-
-//             // Bricks should be despawned and increment the scoreboard on collision
-//             if maybe_brick.is_some() {
-//                 scoreboard.score += 1;
-//                 commands.entity(collider_entity).despawn();
-//             }
-
-//             // reflect the ball when it collides
-//             let mut reflect_x = false;
-//             let mut reflect_y = false;
-
-//             // only reflect if the ball's velocity is going in the opposite direction of the
-//             // collision
-//             match collision {
-//                 Collision::Left => reflect_x = ball_velocity.x > 0.0,
-//                 Collision::Right => reflect_x = ball_velocity.x < 0.0,
-//                 Collision::Top => reflect_y = ball_velocity.y < 0.0,
-//                 Collision::Bottom => reflect_y = ball_velocity.y > 0.0,
-//                 Collision::Inside => { /* do nothing */ }
-//             }
-
-//             // reflect velocity on the x-axis if we hit something on the x-axis
-//             if reflect_x {
-//                 ball_velocity.x = -ball_velocity.x;
-//             }
-
-//             // reflect velocity on the y-axis if we hit something on the y-axis
-//             if reflect_y {
-//                 ball_velocity.y = -ball_velocity.y;
-//             }
-//         }
-//     }
-// }
 
 // Add the game's entities to our world
 pub fn setup_score_board(mut commands: Commands, asset_server: Res<AssetServer>) {
