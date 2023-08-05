@@ -15,6 +15,16 @@ pub const ENEMY_SIZE: f32 = 20.0;
 pub const BULLET_SIZE: f32 = 5.0;
 pub const WALL_THICKNESS: f32 = 10.0;
 
+#[cfg(feature = "mobile")]
+pub const INITIAL_ENEMY_SPEED_FACTOR: f32 = 40.;
+#[cfg(not(feature = "mobile"))]
+pub const INITIAL_ENEMY_SPEED_FACTOR: f32 = 70.;
+
+#[cfg(feature = "mobile")]
+pub const MAX_NUMBER_OF_ENEMIES: usize = 4;
+#[cfg(not(feature = "mobile"))]
+pub const MAX_NUMBER_OF_ENEMIES: usize = 8;
+
 pub const LEFT_WALL: f32 = -350.;
 pub const RIGHT_WALL: f32 = 350.;
 
@@ -436,17 +446,17 @@ fn spawn_and_move_enemies(
         {
             direction.y = -direction.y;
         }
-        transform.translation.x += 80.0
+        transform.translation.x += INITIAL_ENEMY_SPEED_FACTOR
             * time.delta_seconds()
             * direction.x
             * (1. + destroyed_enemy_count.0 as f32 * 0.08);
-        transform.translation.y += 80.0
+        transform.translation.y += INITIAL_ENEMY_SPEED_FACTOR
             * time.delta_seconds()
             * direction.y
             * (1. + destroyed_enemy_count.0 as f32 * 0.08);
     }
 
-    if query_enemy.iter().len() >= 8 || !allow_new_spawn {
+    if query_enemy.iter().len() >= MAX_NUMBER_OF_ENEMIES || !allow_new_spawn {
         return;
     }
 
